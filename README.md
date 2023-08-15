@@ -28,13 +28,13 @@ Downloads the latest version of vector products for all available flood events i
 
 #### 01-download-images.py
 
-Downloads permanent water layer from [European Commission's Joint Research Centre (JRC)](https://global-surface-water.appspot.com/) and land cover [from the European Space Agency (ESA) WorldCover 10m v100 product](https://esa-worldcover.org/en/data-access) corresponding to each EMS activation event from Google Earth Engine (GEE). The script uses Area of Interest (AOI) from the metadata file and the activation date from the Copernicus EMS table to ensure downloaded data is spatially and temporally aligned to each EMS Rapid Mapping Activation event. 
+Downloads permanent water layer from [European Commission's Joint Research Centre (JRC)](https://global-surface-water.appspot.com/) and land cover from the [European Space Agency (ESA) WorldCover 10m v100 product](https://esa-worldcover.org/en/data-access) corresponding to each EMS activation event from Google Earth Engine (GEE). The script uses Area of Interest (AOI) from the metadata file and the activation date from the Copernicus EMS table to ensure downloaded data is spatially and temporally aligned to each EMS Rapid Mapping Activation event. 
 
 Note, the data is downloaded from GEE to a Google Cloud Storage bucket. This script should be run when authenticated to GEE and setting the `gcs_bucket` variable to a Google Cloud Storage bucket name.
 
 #### 02-get-event-dates.py
 
-Obtain the actual date of the flood events from the [Copernicus event information page](https://emergency.copernicus.eu/mapping/list-of-activations-rapid). The actual event date allows for accurate retrieval of pre-event images if required for subsequent machine learning and flood classification tasks.
+Obtains the actual date of the flood events from the [Copernicus event information page](https://emergency.copernicus.eu/mapping/list-of-activations-rapid). The actual event date allows for accurate retrieval of pre-event images if required for subsequent machine learning and flood classification tasks.
 
 #### 03-merge-images.py
 
