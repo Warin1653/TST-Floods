@@ -54,4 +54,4 @@ Rasterises the flood and hydrography vector product generated for each EMS Rapid
 
 ## Acknowledgements 
 
-This dataset was generated through a project funded by the Climate Change AI Innovation Grants Program. We would also like to acknowledge the [ml4floods](https://github.com/spaceml-org/ml4floods) package which provided functionality used to generate this dataset.
+This dataset was generated through a project funded by the Climate Change AI Innovation Grants Program. We would also like to acknowledge the [ml4floods](https://github.com/spaceml-org/ml4floods) package which provided some functions used to generate this dataset.
