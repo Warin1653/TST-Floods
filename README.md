@@ -20,11 +20,11 @@ Each flood and water mask has three dates associated with it:
 
 ## Overview
 
-#### Data access
+### Data access
 
 The metadata for the flood and water mask files can be found in `/metadata/metadata.csv'.
 
-The data is available for download from the Pacific Data Hub.
+The data is available for download from the [Pacific Data Hub](pacificdata.org/data/dataset/tropical-and-sub-tropical-flood-and-water-masks).
 
 #### 00-download-ems-vectors.py
 
@@ -54,4 +54,4 @@ Rasterises the flood and hydrography vector product generated for each EMS Rapid
 
 ## Acknowledgements 
 
-This dataset was generated through a project funded by the Climate Change AI Innovation Grants Program. We would also like to acknowledge the [ml4floods](https://github.com/spaceml-org/ml4floods) package which provided some functions used to generate this dataset.
+This dataset was generated through a project funded by the Climate Change AI Innovation Grants Program. We would also like to acknowledge the [ml4floods](https://github.com/spaceml-org/ml4floods) package and [Google Earth Engine](https://earthengine.google.com) which provided some functions used to generate this dataset and the [Copernicus Emergency Management Service](https://emergency.copernicus.eu/mapping/list-of-activations-rapid) and  [European Space Agency (ESA; WorldCover 10 m 2020)](https://developers.google.com/earth-engine/datasets/catalog/ESA_WorldCover_v100) for providing access to the underlying data. 
