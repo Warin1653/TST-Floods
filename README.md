@@ -24,7 +24,7 @@ Each flood and water mask has three dates associated with it:
 
 The metadata for the flood and water mask files can be found in `/metadata/metadata.csv'.
 
-The data is available for download from the [Pacific Data Hub](pacificdata.org/data/dataset/tropical-and-sub-tropical-flood-and-water-masks).
+The data is available for download from the [Pacific Data Hub](https://pacificdata.org/data/dataset/tropical-and-sub-tropical-flood-and-water-masks).
 
 #### 00-download-ems-vectors.py
 
