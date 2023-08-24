@@ -9,43 +9,43 @@ from rasterio import features
 # Adapted from https://github.com/spaceml-org/ml4floods/blob/main/ml4floods/data/copernicusEMS/activations.py
 
 # Assign values to each category to burn in raster grid cells
-# where 0: land, 1: flood, 2: hydrology.
+# where 1: land, 2: flood, 3: hydrology.
 CODES_FLOODMAP = {
     # CopernicusEMS (flood)
-    "Flooded area": 1,
-    "Previous flooded area": 1,
-    "Not Applicable": 1,
-    "Not Application": 1,
-    "Flood trace": 1,
-    "Dike breach": 1,
-    "Standing water": 1,
-    "Erosion": 1,
-    "River": 2,
-    "Riverine flood": 1,
+    "Flooded area": 2,
+    "Previous flooded area": 2,
+    "Not Applicable": 2,
+    "Not Application": 2,
+    "Flood trace": 2,
+    "Dike breach": 2,
+    "Standing water": 2,
+    "Erosion": 2,
+    "River": 3,
+    "Riverine flood": 2,
     # CopernicusEMS (hydro)
-    "BH140-River": 2,
-    "BH090-Land Subject to Inundation": 0,
-    "BH080-Lake": 2,
-    "BA040-Open Water": 2,
-    "BA030-Island": 0,  # islands are excluded! see filter_land func
-    "BH141-River Bank": 2,
-    "BH170-Natural Spring": 2,
-    "BH130-Reservoir": 2,
-    "BH141-Stream": 2,
-    "BA010-Coastline": 0,
-    "BH180-Waterfall": 2,
+    "BH140-River": 3,
+    "BH090-Land Subject to Inundation": 1,
+    "BH080-Lake": 3,
+    "BA040-Open Water": 3,
+    "BA030-Island": 1,  # islands are excluded! see filter_land func
+    "BH141-River Bank": 3,
+    "BH170-Natural Spring": 3,
+    "BH130-Reservoir": 3,
+    "BH141-Stream": 3,
+    "BA010-Coastline": 1,
+    "BH180-Waterfall": 3,
     # UNOSAT ------------
-    "preflood water": 2,
-    # "Flooded area": 1,  # 'flood water' DUPLICATED
-    "flood-affected land / possible flood water": 1,
-    # "Flood trace": 1,  # 'probable flash flood-affected land' DUPLICATED
-    "satellite detected water": 1,
-    # "Not Applicable": 1,  # unknown see document DUPLICATED
-    "possible saturated, wet soil/ possible flood water": 1,
-    "aquaculture (wet rice)": 1,
-    "tsunami-affected land": 1,
-    "ran of kutch water": 1,
-    "maximum flood water extent (cumulative)": 1,
+    "preflood water": 3,
+    # "Flooded area": 2,  # 'flood water' DUPLICATED
+    "flood-affected land / possible flood water": 2,
+    # "Flood trace": 2,  # 'probable flash flood-affected land' DUPLICATED
+    "satellite detected water": 2,
+    # "Not Applicable": 2,  # unknown see document DUPLICATED
+    "possible saturated, wet soil/ possible flood water": 2,
+    "aquaculture (wet rice)": 2,
+    "tsunami-affected land": 2,
+    "ran of kutch water": 2,
+    "maximum flood water extent (cumulative)": 2,
 }
 
 
@@ -66,7 +66,7 @@ def compute_water(
         out_path: path to save ground truth image output
     Returns:
         water_mask : np.int16 raster same shape as static image tiff file 
-        {-1: invalid, 0: land, 1: flood, 2: hydro, 3: permanentwaterjrc}
+        {0: invalid, 1: land, 2: flood, 3: hydro and permanentwaterjrc}
     """
 
     # Retrieve the shape, transform, and the CRS
@@ -97,7 +97,7 @@ def compute_water(
 
     # If keep_streams flag is set to "False", subset everything
     # except rows that have source = hydro_1 (river, stream, coastline
-    # river bank, rapids, water fall).
+    # river bank, rapids, waterfall).
     if not keep_streams:
         floodmap_rasterise = floodmap_rasterise[
             floodmap_rasterise["source"] != "hydro_l"
@@ -114,12 +114,12 @@ def compute_water(
     )
 
     # Rasterise vector floodmaps with the codes from CODES_FLOODMAP.
-    # Set all empty grids to 0 (Land).
+    # Set all empty grids to 1 (Land).
     water_mask = features.rasterize(
         shapes=shapes_rasterise,
-        fill=0,
+        fill=1,
         out_shape=out_shape,
-        dtype=np.int16,
+        dtype=np.uint8,
         transform=transform,
         all_touched=keep_streams,
     )
@@ -142,28 +142,27 @@ def compute_water(
             transform=transform,
             all_touched=True,
         )
-        # Every pixel outside the area-of-interest is given a value of -1. 
-        water_mask[valid_mask == 0] = -1
+        # Every pixel outside the area-of-interest is given a value of 0. 
+        water_mask[valid_mask == 0] = 0
 
     # Get permanent water layer from ESA World Cover
     with rasterio.open(permanent_water_path) as src:
         permanent_water = src.read(2)  # ESA WorldCover
         out_meta = src.meta
 
-    # Assign permanent water areas a value of 2. We are only
+    # Assign permanent water areas a value of 3. We are only
     # interested in the permanent water, which has a value of 80,  
     # that is within the valid water masks.
-    water_mask[(water_mask != -1) & (permanent_water == 80)] = 2
+    water_mask[(water_mask != 0) & (permanent_water == 80)] = 3
 
     # Set the number of band and data type for the 
     # new metadata of the ground truth image output.
     out_meta["count"] = 1
-    out_meta["dtype"] = np.int16
+    out_meta["dtype"] = np.uint8
 
     # Save the ground truth image output with the new metadata
     with rasterio.open(out_path, "w", **out_meta) as dst:
         dst.write(water_mask, 1)
-
 
 if __name__ == "__main__":
     
@@ -215,6 +214,39 @@ if __name__ == "__main__":
         if i.endswith(".geojson"):
             emsr_floodmaps_geojson.append(i)
     
+    
+    # -----------------------------------------------------------
+    # Fix the names of files in the 'static-images-merged' folder 
+    # that have non-matching names with their corresponding 
+    # floodmap file names. Since we are combining files from the 
+    # same EMSR activation, the file names need to be consistent.
+    # -----------------------------------------------------------
+    
+    static_images_names_fixed = []
+
+    for filename in static_images:
+        parts = filename.split('_')  
+        if parts[1].startswith("03MURAMBINDASW"):
+            parts[1] = parts[1][:-2] + "SOUTHWEST"  # Replace SW with SOUTHWEST
+            static_images_names_fixed.append('_'.join(parts))
+        elif parts[1].startswith("04MURAMBINDASE"):
+            parts[1] = parts[1][:-2] + "SOUTHEAST"  # Replace SE with SOUTHEAST
+            static_images_names_fixed.append('_'.join(parts))
+        elif parts[1].startswith("06RUSITUVALLEYSW"):
+            parts[1] = parts[1][:-2] + "SOUTHWEST"  # Replace SW with SOUTHWEST
+            static_images_names_fixed.append('_'.join(parts))
+        elif parts[1].startswith("07RUSITUVALLEYSE"):
+            parts[1] = parts[1][:-2] + "SOUTHEAST"  # Replace SE with SOUTHEAST
+            static_images_names_fixed.append('_'.join(parts))
+        else:
+            static_images_names_fixed.append(filename)  # Keep the original name if no change needed
+
+    # Apply the changes to the local static_images_merged folder
+    for old_name, new_name in zip(static_images, static_images_names_fixed):
+        old_path = os.path.join(static_images_path, old_name)
+        new_path = os.path.join(static_images_path, new_name)
+        os.rename(old_path, new_path)
+            
     # -----------------------------------------
     # Generate ground truth data for each event 
     # using the compute_water function
@@ -228,7 +260,7 @@ if __name__ == "__main__":
             emsr_code = "_".join(emsr_code)
 
             # Configure output name to be saved and run compute_water function
-            for z in static_images:
+            for z in static_images_names_fixed:
                 if z.startswith(emsr_code):
                     permanent_water_path = os.path.join(static_images_path, z)
                     floodmap = gpd.read_file(os.path.join(folder_metadata, i))
