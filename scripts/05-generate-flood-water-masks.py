@@ -9,7 +9,7 @@ from rasterio import features
 # Adapted from https://github.com/spaceml-org/ml4floods/blob/main/ml4floods/data/copernicusEMS/activations.py
 
 # Assign values to each category to burn in raster grid cells
-# where 1: land, 2: flood, 3: hydrology.
+# where 1: land, 2: flood, 3: water.
 CODES_FLOODMAP = {
     # CopernicusEMS (flood)
     "Flooded area": 2,
@@ -66,7 +66,7 @@ def compute_water(
         out_path: path to save ground truth image output
     Returns:
         water_mask : np.int16 raster same shape as static image tiff file 
-        {0: invalid, 1: land, 2: flood, 3: hydro and permanentwaterjrc}
+        {0: invalid, 1: land, 2: flood, 3: hydrology and permanentwaterjrc}
     """
 
     # Retrieve the shape, transform, and the CRS
@@ -142,6 +142,7 @@ def compute_water(
             transform=transform,
             all_touched=True,
         )
+        
         # Every pixel outside the area-of-interest is given a value of 0. 
         water_mask[valid_mask == 0] = 0
 
@@ -216,37 +217,63 @@ if __name__ == "__main__":
     
     
     # -----------------------------------------------------------
-    # Fix the names of files in the 'static-images-merged' folder 
-    # that have non-matching names with their corresponding 
-    # floodmap file names. Since we are combining files from the 
-    # same EMSR activation, the file names need to be consistent.
+    # Fix the file names in static-images-merged folder that have
+    # non-matching names with their corresponding floodmap file
+    # names in Copernicus_EMS_metadata folder. Because we are 
+    # combining files from the same EMSR activation, the code 
+    # requires the file names to be consistent.
     # -----------------------------------------------------------
     
-    static_images_names_fixed = []
+    # Fix the naming of mapping products
+    static_images_names_fixed_1 = []
 
     for filename in static_images:
         parts = filename.split('_')  
-        if parts[1].startswith("03MURAMBINDASW"):
-            parts[1] = parts[1][:-2] + "SOUTHWEST"  # Replace SW with SOUTHWEST
-            static_images_names_fixed.append('_'.join(parts))
-        elif parts[1].startswith("04MURAMBINDASE"):
-            parts[1] = parts[1][:-2] + "SOUTHEAST"  # Replace SE with SOUTHEAST
-            static_images_names_fixed.append('_'.join(parts))
-        elif parts[1].startswith("06RUSITUVALLEYSW"):
-            parts[1] = parts[1][:-2] + "SOUTHWEST"  # Replace SW with SOUTHWEST
-            static_images_names_fixed.append('_'.join(parts))
-        elif parts[1].startswith("07RUSITUVALLEYSE"):
-            parts[1] = parts[1][:-2] + "SOUTHEAST"  # Replace SE with SOUTHEAST
-            static_images_names_fixed.append('_'.join(parts))
+        if parts[1].startswith("AOI"):
+            static_images_names_fixed_1.append(filename)   # Keep the original name if no change needed
         else:
-            static_images_names_fixed.append(filename)  # Keep the original name if no change needed
+            if parts[2].startswith("DEL") and parts[3].startswith("v"):
+                parts[2] = parts[2].replace("DEL","01DELINEATION_MAP")  # Replace DEL with 01DELINEATION_MAP it is not a MONIT
+                static_images_names_fixed_1.append('_'.join(parts))
+            elif parts[2] == "DEL" and parts[3].startswith("MONIT"):
+                parts[2] = parts[2].replace("DEL","01DELINEATION")  # Replace DEL with just 01DELINEATION it is a MONIT
+                static_images_names_fixed_1.append('_'.join(parts))
+            elif parts[2].startswith("GRA") and parts[3].startswith("v"):
+                parts[2] = parts[2].replace("GRA","02GRADING_MAP")  # Repalce GRA with 02GRADING_MAP
+                static_images_names_fixed_1.append('_'.join(parts))
+            elif parts[2].startswith("GRA") and parts[3].startswith("MONIT"):
+                parts[2] = parts[2].replace("GRA","02GRADING")  # Repalce GRA with 02GRADING_MAP
+                static_images_names_fixed_1.append('_'.join(parts))
+            else:
+                static_images_names_fixed_1.append(filename)  # Keep the original name if no change needed
 
+    # Fix the naming of AOI
+    static_images_names_fixed_2 = []
+
+    for filename in static_images_names_fixed_1:
+            parts = filename.split('_')  
+            if parts[1].startswith("03MURAMBINDASW"):
+                parts[1] = parts[1][:-2] + "SOUTHWEST"  # Replace SW with SOUTHWEST
+                static_images_names_fixed_2.append('_'.join(parts))
+            elif parts[1].startswith("04MURAMBINDASE"):
+                parts[1] = parts[1][:-2] + "SOUTHEAST"  # Replace SE with SOUTHEAST
+                static_images_names_fixed_2.append('_'.join(parts))
+            elif parts[1].startswith("06RUSITUVALLEYSW"):
+                parts[1] = parts[1][:-2] + "SOUTHWEST"  # Replace SW with SOUTHWEST
+                static_images_names_fixed_2.append('_'.join(parts))
+            elif parts[1].startswith("07RUSITUVALLEYSE"):
+                parts[1] = parts[1][:-2] + "SOUTHEAST"  # Replace SE with SOUTHEAST
+                static_images_names_fixed_2.append('_'.join(parts))
+            else:
+                static_images_names_fixed_2.append(filename)  # Keep the original name if no change needed
+     
     # Apply the changes to the local static_images_merged folder
-    for old_name, new_name in zip(static_images, static_images_names_fixed):
+    for old_name, new_name in zip(static_images, static_images_names_fixed_2):
         old_path = os.path.join(static_images_path, old_name)
         new_path = os.path.join(static_images_path, new_name)
         os.rename(old_path, new_path)
-            
+        
+        
     # -----------------------------------------
     # Generate ground truth data for each event 
     # using the compute_water function
@@ -256,12 +283,12 @@ if __name__ == "__main__":
         logger.info(f"generating ground truth for event {i}")
         try:
             # Get EMSR code and AOI for each event
-            emsr_code = i.split("_")[0:2]
-            emsr_code = "_".join(emsr_code)
+            emsrcode_AOI_product_monit = i.split("_")[0:4]
+            emsrcode_AOI_product_monit = "_".join(emsrcode_AOI_product_monit)
 
             # Configure output name to be saved and run compute_water function
-            for z in static_images_names_fixed:
-                if z.startswith(emsr_code):
+            for z in static_images_names_fixed_2:
+                if z.startswith(emsrcode_AOI_product_monit):
                     permanent_water_path = os.path.join(static_images_path, z)
                     floodmap = gpd.read_file(os.path.join(folder_metadata, i))
                     out_fname = z.split(".tif")[0]
