@@ -16,7 +16,7 @@ def generate_ground_truth(ground_truth_dir, ground_truth_merge_dir):
 
     Args:
         ground_truth_dir: directory of ground truth flood water masks - there can be several
-        EMS activations per event as the event unfolds over time.
+        EMSR activations per event as the event unfolds over time.
 
         ground_truth_merge_dir: directory to store merged ground truth flood water masks
     """
